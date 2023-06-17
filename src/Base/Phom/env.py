@@ -902,7 +902,13 @@ def bot_lv0(state, perData):
     return arr_action[idx], perData
 
 
-def numba_main_2(p0, num_game, per_player, level, *args):
+def run(
+    p0: any = bot_lv0,
+    num_game: int = 100,
+    per_player: np.ndarray = np.array([[0.0]]),
+    level: int = 0,
+    *args,
+):
     num_bot = getAgentSize() - 1
     list_other = np.array([-1] + [i+1 for i in range(num_bot)])
     try:
