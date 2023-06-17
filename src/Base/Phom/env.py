@@ -948,7 +948,7 @@ def numba_main_2(p0, num_game, per_player, level, *args):
                 lst_agent_level[i]) for i in range(num_bot)]
             for i in range(num_bot):
                 data_agent_level = np.load(
-                    f'{SHORT_PATH}Agent/{lst_agent_level[i]}/Data/{env_name}_{level}/Train.npy', allow_pickle=True)
+                    f'{SHORT_PATH}src/Agent/{lst_agent_level[i]}/Data/{env_name}_{level}/Train.npy', allow_pickle=True)
                 _list_per_level_.append(
                     lst_module_level[i].convert_to_test(data_agent_level))
                 _list_bot_level_.append(lst_module_level[i].Test)
