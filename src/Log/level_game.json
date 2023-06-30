@@ -470,9 +470,9 @@
     8316
    ],
    [
+     "TimeBasedAlgorithm",
      "BiasAlgorithm",
-     "MultiDimensionAlgorithm",
-     "TimeBasedAlgorithm"
+     "MultiDimensionAlgorithm"
    ]
   ]
  },

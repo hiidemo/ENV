@@ -951,7 +951,7 @@ def run(
             _list_per_level_ = [np.array([[0.]], dtype=np.float64)
                                 for _ in range(num_bot)]
             _list_bot_level_ = [bot_lv0 for _ in range(num_bot)]
-        else:
+        elif _level_ == 1:
             env_name = sys.argv[1]
             if len(args) > 0:
                 dict_level = json.load(
@@ -972,6 +972,12 @@ def run(
                 _list_per_level_.append(
                     lst_module_level[i].convert_to_test(data_agent_level))
                 _list_bot_level_.append(lst_module_level[i].Test)
+        else:
+            agent = load_module_player("agentPhom", "Phom")
+            perx = agent.DataAgent()
+
+            _list_per_level_ = [perx, perx, perx]
+            _list_bot_level_ = [agent.Test, agent.Test, agent.Test]
 
     if check_njit:
         return n_games_numba(p0, num_game, per_player, list_other,
@@ -1032,6 +1038,7 @@ def emulate(list_player, per):
             print(f'===> Turn {env[52]}: ', end=" ")
 
             action, perData = listAgent[pIdx](getAgentState(env), perData)
+            is_danhbai = False
             if env[53] == 0:
                 if action == 0:  # ăn bài
                     print(f'Player {pIdx} ăn bài   {get_card(env[54])}')
@@ -1039,10 +1046,18 @@ def emulate(list_player, per):
                     print(f'Player {pIdx} bốc bài  ')
             else:  # đánh bài
                 print(f'Player {pIdx} đánh con {get_card(action-2)}')
+                is_danhbai = True
+            
             stepEnv(action, env)
+        
+            if is_danhbai and (len(np.where(env[0:52] == 4)[0])+1 <= 4):
+                print('Hạ phỏm: ')
+                for card in np.where(env[55+52:55+52+52] == pIdx)[0]:
+                    print(get_card(card), end=" ")
+                print(' ')
+
             # print('điểm', env[55:55+52])
             winner = checkEnded(env)
-            print(env[:52])
             if winner != -1:
                 for i in range(0, 4):
                     print(f'P{i}:', end=" ")
