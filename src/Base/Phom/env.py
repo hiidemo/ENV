@@ -73,10 +73,34 @@ def check_ca(a, arr):
 
 
 @njit()
-def tim_diem_toi_uu(pt, py):
+def check_phom(arr_cards):
+  arr_cards.sort()
+  phom = []
+  ptype = 0
+  for i in range(len(arr_cards)):
+    if (i < len(arr_cards) - 1):
+      if (arr_cards[i] // 4 == arr_cards[i + 1] // 4) and (ptype == 0 or ptype == 1):
+        phom.append(arr_cards[i])
+        ptype = 1
+      elif arr_cards[i] + 4 == arr_cards[i + 1] and (ptype == 0 or ptype == 2):
+        phom.append(arr_cards[i])
+        ptype = 2
+      else:
+        break
+    elif (arr_cards[i] // 4 == arr_cards[i - 1] // 4 and ptype == 1) or (arr_cards[i] - 4 == arr_cards[i - 1] and ptype == 2):
+      phom.append(arr_cards[i])
+
+  if len(phom) >= 3:
+    return ptype
+  else:
+    return 0
+
+
+@njit()
+def tim_diem_toi_uu(py):
     k = []
-    for i in pt:
-        if check_ca(i, pt[pt != i]) == True:
+    for i in py:
+        if check_ca(i, py[py != i]) == True:
             k.append(i)
     k = np.array(k)
     l = []
@@ -128,49 +152,72 @@ def tim_diem_toi_uu(pt, py):
         if len(l3) > 2:
             l3 = np.array(l3)
             l.append(l3)
+
     arr1 = k//4
     l1 = []
     for i in range(0, 13):
         l1.append(np.count_nonzero(arr1 == i))
     for i in np.where(np.array(l1) >= 3)[0]:
+        # l hiện tại chứa tất các phỏm có thể (có thể trùng lá bài giữa các phỏm)
         l.append(k[np.where(arr1 == i)])
 
-    y = []
-    for i in l:
-        if i is not None:
-            if len(i) >= 4:
-                for j in range(3, len(i)+1):
-                    for k in range(0, len(i)-j+1):
-                        y.append(i[k:k+j])
+    y = []  # tất cả các TH lựa chọn phỏm
+    for idx, _arr in enumerate(l):
+        if _arr is not None:
+            loai_phom = check_phom(_arr)
+            if len(_arr) >= 4 and loai_phom == 1:  # phỏm ngang
+              for j in range(len(_arr)):
+                y.append(_arr[_arr != _arr[j]])
+            if len(_arr) >= 4 and loai_phom == 2:  # phỏm dây
+              for j in range(3, len(_arr)+1):
+                  for k in range(0, len(_arr)-j+1):
+                      y.append(_arr[k:k+j])
             else:
-                y.append(i)
+              y.append(_arr)
 
     lx = []
-    r = []
+    r = []  # tất cả các TH hạ phỏm có thể, tính cả TH thứ tự khác nhau
+    _r = []
     u = []
     for i in range(len(y)):
         for j in range(len(y)):
             if len(np.intersect1d(y[i], y[j])) == 0 and i != j:
+                # print('intersect1d', np.append(y[i], y[j]))
                 t = np.sum(py)-(np.sum(y[i])+np.sum(y[j]))
                 lx.append(t)
                 r.append(np.append(y[i], y[j]))
+
+    _r = r
+    for i in range(len(r)):
+      for j in range(len(y)):
+        if len(np.intersect1d(r[i], y[j])) == 0:
+            t = np.sum(py)-(np.sum(r[i])+np.sum(y[j]))
+            lx.append(t)
+            _r.append(np.append(r[i], y[j]))
+
     for i in range(len(y)):
         lx.append(np.sum(py)-np.sum(y[i]))
-        r.append((y[i]))
+        _r.append((y[i]))
 
-    scoreArr = np.array(lx)
-    minScore = np.min(scoreArr)
-    minId = np.where(scoreArr == minScore)[0]
-    for v in minId:
-        u.append(r[v])
-    return u[0]
+    phom_sizes = np.array([len(i) for i in _r])
+    max_cay = np.max(phom_sizes)
+    if max_cay >= 9:  # ù
+      maxId = np.where(phom_sizes == max_cay)[0]
+      return (_r[maxId[0]])
+    else:
+      scoreArr = np.array(lx)
+      minScore = np.min(scoreArr)
+      minId = np.where(scoreArr == minScore)[0]
+      for v in minId:
+          u.append(_r[v])
+      return u[0]
 
 
 @njit()
-def tim_diem_toi_uu_co_phom(pt, py, s):
+def tim_diem_toi_uu_co_phom(py, s):
     k = []
-    for i in pt:
-        if check_ca(i, pt[pt != i]) == True:
+    for i in py:
+        if check_ca(i, py[py != i]) == True:
             k.append(i)
     k = np.array(k)
     l = []
@@ -268,49 +315,55 @@ def tim_diem_toi_uu_co_phom(pt, py, s):
         l1.append(np.count_nonzero(arr1 == i))
     for i in np.where(np.array(l1) >= 3)[0]:
         l.append(k[np.where(arr1 == i)])
+
     y = []
-    for i in l:
-        if i is not None:
-            if len(i) >= 4:
-                for j in range(3, len(i)+1):
-                    for k in range(0, len(i)-j+1):
-                        y.append(i[k:k+j])
+    for _arr in l:
+        if _arr is not None:
+            loai_phom = check_phom(_arr)
+            if len(_arr) >= 4 and loai_phom == 1:  # phỏm ngang
+              for j in range(len(_arr)):
+                phom = _arr[_arr != _arr[j]]
+                if len(np.intersect1d(s, phom)) < 2: # không có cây ăn nào hoặc không có 2 cây ăn cùng xuất hiện trong 1 phỏm
+                  y.append(phom)
+            if len(_arr) >= 4 and loai_phom == 2:  # phỏm dây
+              for j in range(3, len(_arr)+1):
+                  for k in range(0, len(_arr)-j+1):
+                      if len(np.intersect1d(s, _arr[k:k+j])) < 2:
+                        y.append(_arr[k:k+j])
             else:
-                y.append(i)
+              if len(np.intersect1d(s, _arr)) < 2:
+                y.append(_arr)
+
     lx = []
     r = []
+    _r = []
     u = []
     for i in range(len(y)):
         for j in range(len(y)):
             if len(np.intersect1d(y[i], y[j])) == 0 and i != j:
                 r.append(np.append(y[i], y[j]))
+
+    _r = r
+    for i in range(len(r)):
+      for j in range(len(y)):
+        if len(np.intersect1d(r[i], y[j])) == 0:
+            _r.append(np.append(r[i], y[j]))
+
     for i in range(len(y)):
-        r.append((y[i]))
+        _r.append((y[i]))
 
     b = []
-    if len(s) == 1:
-        for i in range(len(r)):
-            if len(np.intersect1d(s, r[i])) == 1:
-                b.append(r[i])
-                lx.append(np.sum(py)-np.sum(r[i]))
-
-    else:
-        for i in range(len(r)):
-            if len(np.intersect1d(s[0], r[i])) == 1:
-                for j in range(len(r)):
-                    if j != i:
-                        if len(np.intersect1d(s[1], r[j])) == 1:
-                            b.append(np.append(r[i], r[j]))
-                            lx.append(np.sum(py)-np.sum(r[i])-np.sum(r[j]))
+    for i in range(len(_r)):
+        if len(np.intersect1d(s, r[i])) == len(s):
+            b.append(r[i])
+            lx.append(np.sum(py)-np.sum(r[i]))
 
     scoreArr = np.array(lx)
     minScore = np.min(scoreArr)
     minId = np.where(scoreArr == minScore)[0]
-
     for i in minId:
         u.append(b[i])
     return u[0]
-
 
 @njit()
 def check_so_ca(a, arr):
@@ -341,7 +394,7 @@ def check_so_ca(a, arr):
 @njit()
 def getValidActions(p_state):
     """
-    trả về array validActions (chỉ chứa những giá trị 0, 1 - với validActions[k] = 1 thì hành động k có thể thực hiện ngược lại thì = 0), người chơi đưa ra những hành động có thể thực hiện tại state nhận được.
+    trả về array validActions (chỉ chứa những giá trị 0, 1 - với validActions[k] = 1 thì hành động k có thể thực hiện, ngược lại thì = 0), người chơi đưa ra những hành động có thể thực hiện tại state nhận được.
     """
     vi_tri = np.where(p_state[416:420] == 1)[0][0]
     phase = p_state[420:423]
@@ -484,6 +537,9 @@ def stepEnv(action, env):
     """
     Từ action nhận được, phương thức này sẽ thực hiện trò chơi theo hành động đó (tức biến đổi env) để đưa ra trạng thái env mới. Đây là một hàm khó tạo nhất trong hệ thống, cần sự am hiểu trò chơi để có thể đưa ra đầy đủ các trường hợp giúp trò chơi hoạt động đúng
     """
+    ### Bài dưới đây sẽ hạ sai: 6♤ 6♧ 6♢ 6♡ 7♧ 8♧ 9♤ 9♧ 9♡
+    ### Đáng lẽ ù nhưng lại hạ: 6♧ 6♢ 6♡ 7♧ 8♧ 9♧
+
     temp = env[0:52]
     phase = env[53]
     turn = env[52]
@@ -513,17 +569,15 @@ def stepEnv(action, env):
                 if len(check_la_phom(np.where(temp == pIdx)[0])) >= 3:
                     temp[action-2] = pIdx+5
                     env[54] = action-2
-                    r = tim_diem_toi_uu(np.where(temp == pIdx)[
-                                        0], np.where(temp == pIdx)[0])
+                    r = tim_diem_toi_uu(np.where(temp == pIdx)[0])
+                    print('tim_diem_toi_uu---', np.where(temp == pIdx)[0])
                     env[55+52:55+52+52][r] = pIdx
                     env[55:55+52][r] = -1
                     env[55:55+52][np.where(temp == pIdx)[0]] = pIdx
             elif len(temp[temp == pIdx + 9]) > 0: # có ăn
 
-                k = np.append(np.where(temp == pIdx)[
-                              0], np.where(temp == pIdx + 9)[0])
-                r = tim_diem_toi_uu_co_phom(
-                    k, k, np.where(temp == pIdx + 9)[0])
+                k = np.append(np.where(temp == pIdx)[0], np.where(temp == pIdx + 9)[0])
+                r = tim_diem_toi_uu_co_phom(k, np.where(temp == pIdx + 9)[0])
                 env[55+52:55+52+52][r] = pIdx
                 env[55:55+52][r] = -1
 
@@ -715,11 +769,21 @@ def checkEnded(env):
                          0]), len(np.where(la_phom == 11)[0]), len(np.where(la_phom == 12)[0])])
     if len(np.where(env[0:52] == 5)[0])+len(np.where(env[0:52] == 6)[0])+len(np.where(env[0:52] == 7)[0])+len(np.where(env[0:52] == 8)[0]) < 16: # tổng số cây đã đánh ra
         # check ù 3 phỏm
-        if len(np.where(la_phom == 9)[0]) == 3 or len(np.where(la_phom == 10)[0]) == 3 or len(np.where(la_phom == 11)[0]) == 3 or len(np.where(la_phom == 12)[0]) == 3:
-            maxScorePlayers = np.where(scorephom == 3)[0]
-            return maxScorePlayers[0]
-        else:
-            return -1
+        for pIdx in range(0, 4):
+            k = np.append(np.where(la_phom == pIdx)[0], np.where(la_phom == pIdx + 9)[0])
+            if len(check_la_phom(k)) >= 3:
+                r = tim_diem_toi_uu_co_phom(k, np.where(la_phom == pIdx + 9)[0])
+                if (len(r) >= 9):
+                    env[55+52:55+52+52][r] = pIdx
+                    env[55:55+52][r] = -1
+                    return pIdx
+        return -1
+
+        # if len(np.where(la_phom == 9)[0]) == 3 or len(np.where(la_phom == 10)[0]) == 3 or len(np.where(la_phom == 11)[0]) == 3 or len(np.where(la_phom == 12)[0]) == 3:
+        #     maxScorePlayers = np.where(scorephom == 3)[0]
+        #     return maxScorePlayers[0]
+        # else:
+        #     return -1
     elif len(np.where(env[0:52] == 5)[0])+len(np.where(env[0:52] == 6)[0])+len(np.where(env[0:52] == 7)[0])+len(np.where(env[0:52] == 8)[0]) == 16:
         # for i in range(0,4):
         #   la_phom = env[0:52]
@@ -1014,10 +1078,13 @@ def emulate(list_player, per):
         # current_time = now.strftime("%H_%M_%S")
         # np.save(f"env_{current_time}", env)
 
-        env = np.load(f'env_12_32_14.npy', allow_pickle=True)
+        env = np.load(f'env_10_59_01.npy', allow_pickle=True)
+        # temp = env[0:52]
+        # r = tim_diem_toi_uu(np.where(temp == pIdx)[0], np.where(temp == pIdx)[0])
+        # print(r)
 
-        # if check_u_khan(np.where(env[0:52] == 0)[0]) == True or check_u_khan(np.where(env[0:52] == 1)[0]) == True or check_u_khan(np.where(env[0:52] == 2)[0]) == True or check_u_khan(np.where(env[0:52] == 3)[0]) == True:
-        #     env = initEnv()
+        if check_u_khan(np.where(env[0:52] == 0)[0]) == True or check_u_khan(np.where(env[0:52] == 1)[0]) == True or check_u_khan(np.where(env[0:52] == 2)[0]) == True or check_u_khan(np.where(env[0:52] == 3)[0]) == True:
+            env = initEnv()
         tempData = []
         for _ in range(4):
             dataOnePlayer = List()
